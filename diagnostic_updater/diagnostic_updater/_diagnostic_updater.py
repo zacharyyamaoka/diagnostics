@@ -239,8 +239,12 @@ class Updater(DiagnosticTaskVector):
         self.publisher = self.node.create_publisher(
             DiagnosticArray, '/diagnostics', 1)
         self.period_parameter = 'diagnostic_updater.period'
-        self.__period = self.node.declare_parameter(
-            self.period_parameter, period).value
+
+        # In case multiple diagonistics used in single node, don't redeclare param
+        if not self.node.has_parameter(self.period_parameter):
+            self.node.declare_parameter(self.period_parameter, period)
+        self.__period = self.node.get_parameter(self.period_parameter).value
+
         self.timer = self.node.create_timer(self.__period, self.update)
 
         self.verbose = False
@@ -260,13 +264,9 @@ class Updater(DiagnosticTaskVector):
         else:
             self.node_name = self.node.get_name()
 
-    def update(self):
-        """
-        Update the diagnostics.
+        self.last_da = DiagnosticArray()
 
-        Causes the diagnostics to update if the inter-update interval has
-        been exceeded.
-        """
+    def run_all_tasks(self):
         warn_nohwid = len(self.hwid) == 0
 
         status_vec = []
@@ -302,6 +302,16 @@ class Updater(DiagnosticTaskVector):
                 the device is open before calling setHardwareID.')
             self.warn_nohwid_done = True
 
+        return status_vec
+    
+    def update(self):
+        """
+        Update the diagnostics.
+
+        Causes the diagnostics to update if the inter-update interval has
+        been exceeded.
+        """
+        status_vec = self.run_all_tasks()
         self.publish(status_vec)
 
     @property
@@ -374,6 +384,7 @@ class Updater(DiagnosticTaskVector):
             db.level = stat.level
             da.status.append(db)
         self.publisher.publish(da)
+        self.last_da = da
 
     def addedTaskCallback(self, task):
         """Publish a task (called when added to the updater)."""
