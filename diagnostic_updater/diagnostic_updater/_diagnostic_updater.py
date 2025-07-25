@@ -39,6 +39,7 @@ diagnostic_updater for Python.
 """
 
 import threading
+from typing import List
 
 from diagnostic_msgs.msg import DiagnosticArray
 from diagnostic_msgs.msg import DiagnosticStatus
@@ -266,7 +267,7 @@ class Updater(DiagnosticTaskVector):
 
         self.last_da = DiagnosticArray()
 
-    def run_all_tasks(self):
+    def run_all_tasks(self) -> List[DiagnosticStatusWrapper]:
         warn_nohwid = len(self.hwid) == 0
 
         status_vec = []
